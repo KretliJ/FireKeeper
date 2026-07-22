@@ -91,6 +91,7 @@ namespace FireKeeper
     {
         public string ClientId { get; set; }
         public string ClientSecret { get; set; }
+        public bool DebugEnabled { get; set; }
 
         public bool IsValid => 
             !string.IsNullOrEmpty(ClientId) && 

@@ -27,8 +27,9 @@
 ## 🗺️ Roadmap & Planned Features
 
 ### Technical Improvements
-- ✅ Verify and correct technical debt and possible security issues
-- ✅ Add extensive testing
+- ⬜ Verify and correct technical debt and possible security issues
+- ⬜ Add extensive testing
+- ✅ Make it so double clicking icon tray brings up option manager
 - ⬜ Add run on system start option
 - ⬜ Update backups to allow auto-delete
 - ⬜ Update backups to allow incremental backups
@@ -40,17 +41,19 @@
 - ⬜ Add other cloud providers
 - ⬜ Add drag and drop of a backup file to restore
 - ⬜ Add drag folder to set profile path
+- ⬜ Allow profile sharing between windows devices (complex)
 
 ### UX Improvements
 - ⬜ Add dark mode
 - ⬜ Add system language support
 - ⬜ Update UI renderer
 - ⬜ Add progress bar
-- ⬜ Add logging
+- ✅ Add logging
 - ⬜ Add progress tracking
 - ⬜ Add custom tray notifications
 - ⬜ Add step-by-step guide for new users
 
+- ⬜ Make sure the damn thing works before adding anything new
 ---
 
 ## 📋 Table of Contents

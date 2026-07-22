@@ -134,12 +134,14 @@ namespace FireKeeper
             try
             {
                 googleConfig = ConfigManager.GetGoogleDriveConfig();
+                DebugConsole.SetEnabled(googleConfig.DebugEnabled);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(ex.Message, APP_NAME + " - Setup Required",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 googleConfig = new GoogleDriveConfig { ClientId = "", ClientSecret = "" };
+                DebugConsole.SetEnabled(false);
             }
 
             // Load app config
@@ -161,6 +163,9 @@ namespace FireKeeper
             menu.Items.Add("-");
             menu.Items.Add("Exit", null, Exit);
             trayIcon.ContextMenuStrip = menu;
+
+            // Double-click opens the manager
+            trayIcon.DoubleClick += (s, e) => OpenManager(s, e);
 
             // Start backup scheduler
             StartScheduler();
@@ -795,35 +800,145 @@ namespace FireKeeper
                     APP_NAME, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        public string ShowProfileSelector(string title)
+        {
+            string profilesPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "Mozilla", "Firefox", "Profiles");
+
+            var profiles = new List<(string Path, string Name)>();
+
+            if (Directory.Exists(profilesPath))
+            {
+                foreach (var dir in Directory.GetDirectories(profilesPath, "*.default*"))
+                {
+                    string name = Path.GetFileName(dir);
+                    profiles.Add((dir, name));
+                }
+            }
+
+            if (profiles.Count == 0)
+            {
+                // No profiles found — fall back to folder browser
+                using (FolderBrowserDialog fbd = new FolderBrowserDialog())
+                {
+                    fbd.Description = title;
+                    fbd.SelectedPath = profilesPath;
+                    fbd.ShowNewFolderButton = false;
+                    return fbd.ShowDialog() == DialogResult.OK ? fbd.SelectedPath : null;
+                }
+            }
+
+            if (profiles.Count == 1)
+            {
+                // Only one profile — use it directly
+                return profiles[0].Path;
+            }
+
+            // Multiple profiles — show selector dialog
+            using (Form selector = new Form())
+            {
+                selector.Text = title;
+                selector.Size = new System.Drawing.Size(500, 300);
+                selector.StartPosition = FormStartPosition.CenterScreen;
+                selector.FormBorderStyle = FormBorderStyle.FixedDialog;
+                selector.MaximizeBox = false;
+                selector.MinimizeBox = false;
+                try { selector.Icon = this.trayIcon.Icon; } catch { }
+
+                TableLayoutPanel panel = new TableLayoutPanel();
+                panel.Dock = DockStyle.Fill;
+                panel.Padding = new Padding(20);
+                panel.RowCount = 3;
+
+                Label header = new Label();
+                header.Text = "🔥 FireKeeper detected multiple Firefox profiles:\n" +
+                              "Select the one you want to use:";
+                header.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                header.AutoSize = true;
+                panel.Controls.Add(header, 0, 0);
+
+                ListBox listBox = new ListBox();
+                listBox.Dock = DockStyle.Fill;
+                listBox.Font = new Font("Segoe UI", 10);
+                foreach (var p in profiles)
+                {
+                    listBox.Items.Add($"{p.Name}  —  {p.Path}");
+                }
+                listBox.SelectedIndex = 0;
+                panel.Controls.Add(listBox, 0, 1);
+
+                FlowLayoutPanel btnPanel = new FlowLayoutPanel();
+                btnPanel.FlowDirection = FlowDirection.RightToLeft;
+                btnPanel.Dock = DockStyle.Bottom;
+                btnPanel.Height = 40;
+
+                Button okBtn = new Button();
+                okBtn.Text = "Select";
+                okBtn.Size = new System.Drawing.Size(100, 32);
+                okBtn.DialogResult = DialogResult.OK;
+                okBtn.Click += (s, e) => selector.DialogResult = DialogResult.OK;
+                btnPanel.Controls.Add(okBtn);
+
+                Button cancelBtn = new Button();
+                cancelBtn.Text = "Cancel";
+                cancelBtn.Size = new System.Drawing.Size(100, 32);
+                cancelBtn.DialogResult = DialogResult.Cancel;
+                btnPanel.Controls.Add(cancelBtn);
+
+                panel.Controls.Add(btnPanel, 0, 2);
+                selector.Controls.Add(panel);
+                selector.AcceptButton = okBtn;
+                selector.CancelButton = cancelBtn;
+
+                DialogResult result = selector.ShowDialog();
+                if (result == DialogResult.OK && listBox.SelectedIndex >= 0)
+                {
+                    return profiles[listBox.SelectedIndex].Path;
+                }
+                return null;
+            }
+        }
+
         public async Task RestoreBackup(string zipPath)
         {
-            // Check if Firefox is running
+            // Create and show debug console
+            DebugConsole.Show();
+            DebugConsole.Log("=== RESTORE STARTED ===");
+            DebugConsole.Log($"zipPath: {zipPath}");
+
+            // Block restore if Firefox is running
             if (IsFirefoxRunning())
             {
-                var result = MessageBox.Show(
-                    "Firefox is currently running. Please close Firefox before restoring a backup.\n\n" +
-                    "Do you want to continue? (Firefox will not be closed automatically)",
+                DebugConsole.Log("ERROR: Firefox is running — aborting restore.");
+                MessageBox.Show(
+                    "Firefox is currently running.\n\n" +
+                    "Please close Firefox completely before restoring. " +
+                    "Check Task Manager for any remaining firefox.exe processes.",
                     APP_NAME,
-                    MessageBoxButtons.YesNo,
+                    MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
-                
-                if (result == DialogResult.No)
-                    return;
+                return;
             }
 
             try
             {
-                string profilePath = config.FirefoxProfilePath;
-                
-                // Validate profile path
+                string profilePath = ShowProfileSelector("Select the Firefox profile to restore to:");
+                if (string.IsNullOrEmpty(profilePath))
+                {
+                    DebugConsole.Log("User cancelled profile selection.");
+                    return;
+                }
+                DebugConsole.Log($"User selected profilePath: {profilePath}");
+
                 if (!Directory.Exists(profilePath))
                 {
-                    MessageBox.Show($"Firefox profile not found: {profilePath}", 
+                    DebugConsole.Log("ERROR: Selected profile directory does not exist.");
+                    MessageBox.Show($"Profile folder not found: {profilePath}",
                         APP_NAME, MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // Confirm restore
                 var confirmResult = MessageBox.Show(
                     $"WARNING: This will overwrite your current Firefox profile!\n\n" +
                     $"Profile: {profilePath}\n" +
@@ -834,59 +949,184 @@ namespace FireKeeper
                     MessageBoxIcon.Warning);
 
                 if (confirmResult == DialogResult.No)
+                {
+                    DebugConsole.Log("User cancelled restore.");
                     return;
+                }
 
-                // Create backup of current profile before restore (just in case)
+                // Create pre-restore backup
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string preRestoreBackup = Path.Combine(GetBackupDir(), $"pre_restore_backup_{timestamp}.zip");
+                DebugConsole.Log($"Creating pre-restore backup: {preRestoreBackup}");
                 await Task.Run(() => CreateBackupZip(profilePath, preRestoreBackup));
-                
+                DebugConsole.Log("Pre-restore backup created.");
+
                 // Extract backup to temp folder
                 string tempExtractDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+                DebugConsole.Log($"Extracting to temp dir: {tempExtractDir}");
                 try
                 {
                     Directory.CreateDirectory(tempExtractDir);
+                    DebugConsole.Log("Temp dir created. Calling ZipFile.ExtractToDirectory...");
                     ZipFile.ExtractToDirectory(zipPath, tempExtractDir);
+                    DebugConsole.Log("Zip extracted successfully.");
 
-                    // Delete current profile contents (but keep the folder)
-                    foreach (string file in Directory.GetFiles(profilePath))
+                    // The zip may have a root folder; find the actual content folder
+                    string extractRoot = tempExtractDir;
+                    var subDirs = Directory.GetDirectories(tempExtractDir);
+                    var rootFiles = Directory.GetFiles(tempExtractDir);
+                    DebugConsole.Log($"Temp root has {subDirs.Length} subdirs, {rootFiles.Length} files.");
+
+                    if (subDirs.Length == 1 && rootFiles.Length == 0)
                     {
-                        try { File.Delete(file); } catch { }
-                    }
-                    foreach (string dir in Directory.GetDirectories(profilePath))
-                    {
-                        try { Directory.Delete(dir, true); } catch { }
+                        // Zip contained a single root folder — use its contents
+                        extractRoot = subDirs[0];
+                        DebugConsole.Log($"Using inner folder as extract root: {extractRoot}");
                     }
 
-                    // Copy restored files
-                    foreach (string file in Directory.GetFiles(tempExtractDir, "*.*", SearchOption.AllDirectories))
+                    // Count extracted files
+                    int extractedFiles = Directory.GetFiles(extractRoot, "*.*", SearchOption.AllDirectories).Length;
+                    DebugConsole.Log($"Extracted {extractedFiles} files from {extractRoot}.");
+
+                    // DELETE EVERYTHING inside the profile folder first
+                    DebugConsole.Log("Clearing profile directory...");
+                    ClearProfileDirectory(profilePath);
+                    DebugConsole.Log("Profile directory cleared.");
+
+                    // Copy all extracted files into the now-empty profile folder
+                    DebugConsole.Log("Copying restored files to profile...");
+                    var failedFiles = new List<string>();
+                    int restoredCount = 0;
+
+                    foreach (string file in Directory.GetFiles(extractRoot, "*.*", SearchOption.AllDirectories))
                     {
-                        string relPath = GetRelativePath(tempExtractDir, file);
+                        string relPath = GetRelativePath(extractRoot, file);
                         string destFile = Path.Combine(profilePath, relPath);
                         Directory.CreateDirectory(Path.GetDirectoryName(destFile));
-                        File.Copy(file, destFile, true);
+
+                        bool copied = TryCopyFileWithRetry(file, destFile, 3, 1000);
+                        if (copied)
+                            restoredCount++;
+                        else
+                        {
+                            failedFiles.Add(relPath);
+                            DebugConsole.Log($"FAILED to copy: {relPath}");
+                        }
                     }
 
-                    MessageBox.Show(
-                        $"✅ Backup restored successfully!\n\n" +
-                        $"Profile: {profilePath}\n" +
-                        $"A pre-restore backup was saved to:\n{preRestoreBackup}\n\n" +
-                        $"Please restart Firefox for changes to take effect.",
-                        APP_NAME,
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                    DebugConsole.Log($"Restore complete. {restoredCount} files copied, {failedFiles.Count} failures.");
+
+                    string resultMessage = BuildRestoreResultMessage(
+                        profilePath, preRestoreBackup, restoredCount, failedFiles);
+
+                    MessageBox.Show(resultMessage, APP_NAME, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 finally
                 {
+                    DebugConsole.Log("Cleaning up temp directory...");
                     if (Directory.Exists(tempExtractDir))
                         Directory.Delete(tempExtractDir, true);
+                    DebugConsole.Log("Cleanup done.");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Restore failed: {ex.Message}", 
+                DebugConsole.Log($"EXCEPTION: {ex.GetType().Name}: {ex.Message}");
+                DebugConsole.Log($"Stack trace:\n{ex.StackTrace}");
+                MessageBox.Show($"Restore failed: {ex.Message}",
                     APP_NAME, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            DebugConsole.Log("=== RESTORE FINISHED ===");
+        }
+
+        private void ClearProfileDirectory(string profilePath)
+        {
+            DebugConsole.Log($"ClearProfileDirectory called for: {profilePath}");
+            var dirInfo = new DirectoryInfo(profilePath);
+
+            var files = dirInfo.GetFiles("*", SearchOption.AllDirectories);
+            DebugConsole.Log($"Found {files.Length} files to delete.");
+            foreach (var file in files)
+            {
+                try
+                {
+                    file.Attributes = FileAttributes.Normal;
+                    file.Delete();
+                }
+                catch (Exception ex)
+                {
+                    DebugConsole.Log($"  Failed to delete file {file.FullName}: {ex.Message}");
+                }
+            }
+
+            var dirs = dirInfo.GetDirectories("*", SearchOption.AllDirectories)
+                .OrderByDescending(d => d.FullName.Length).ToArray();
+            DebugConsole.Log($"Found {dirs.Length} directories to delete.");
+            foreach (var dir in dirs)
+            {
+                try
+                {
+                    dir.Attributes = FileAttributes.Normal;
+                    dir.Delete(true);
+                }
+                catch (Exception ex)
+                {
+                    DebugConsole.Log($"  Failed to delete dir {dir.FullName}: {ex.Message}");
+                }
+            }
+            DebugConsole.Log("ClearProfileDirectory finished.");
+        }
+
+        private bool TryCopyFileWithRetry(string source, string destination, int maxAttempts, int delayMs)
+        {
+            for (int attempt = 0; attempt < maxAttempts; attempt++)
+            {
+                try
+                {
+                    File.Copy(source, destination, overwrite: true);
+                    return true;
+                }
+                catch (IOException ex)
+                {
+                    DebugConsole.Log($"  Copy attempt {attempt + 1} failed for {Path.GetFileName(source)}: {ex.Message}");
+                    if (attempt < maxAttempts - 1)
+                        System.Threading.Thread.Sleep(delayMs);
+                }
+                catch (Exception ex)
+                {
+                    DebugConsole.Log($"  Non-retryable error copying {Path.GetFileName(source)}: {ex.Message}");
+                    break;
+                }
+            }
+            return false;
+        }
+
+        private string BuildRestoreResultMessage(
+            string profilePath, string preRestoreBackup, int restoredCount, List<string> failedFiles)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("✅ Backup restored successfully!");
+            sb.AppendLine();
+            sb.AppendLine($"Profile: {profilePath}");
+            sb.AppendLine($"Files restored: {restoredCount}");
+            sb.AppendLine($"Pre-restore backup: {preRestoreBackup}");
+            sb.AppendLine();
+
+            if (failedFiles.Count > 0)
+            {
+                sb.AppendLine("⚠️ Files that could not be restored:");
+                foreach (var f in failedFiles.Take(10))
+                    sb.AppendLine($"  - {f}");
+                if (failedFiles.Count > 10)
+                    sb.AppendLine($"  ... and {failedFiles.Count - 10} more");
+                sb.AppendLine();
+            }
+
+            sb.AppendLine("Restart Firefox. If tabs don't appear:");
+            sb.AppendLine("  → History → Restore Previous Session");
+            sb.AppendLine("  OR Settings → General → Startup → Restore previous session");
+
+            return sb.ToString();
         }
 
         private bool IsFirefoxRunning()
@@ -902,6 +1142,96 @@ namespace FireKeeper
             }
         }
     }
+    public static class DebugConsole
+    {
+        private static Form _form;
+        private static TextBox _textBox;
+        private static readonly object _lock = new object();
+
+        private static bool _enabled = false;
+
+        public static void SetEnabled(bool enabled)
+        {
+            _enabled = enabled;
+        }
+
+        public static void Show()
+        {
+            if (!_enabled) return;
+
+            lock (_lock)
+            {
+                if (_form != null && !_form.IsDisposed)
+                {
+                    _form.BringToFront();
+                    return;
+                }
+
+                _form = new Form
+                {
+                    Text = "FireKeeper Debug Console",
+                    Size = new System.Drawing.Size(800, 500),
+                    StartPosition = FormStartPosition.Manual,
+                    Location = new System.Drawing.Point(50, 50),
+                    FormBorderStyle = FormBorderStyle.Sizable
+                };
+
+                _textBox = new TextBox
+                {
+                    Multiline = true,
+                    ScrollBars = ScrollBars.Vertical,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Consolas", 10),
+                    BackColor = Color.Black,
+                    ForeColor = Color.LimeGreen,
+                    ReadOnly = true
+                };
+
+                _form.Controls.Add(_textBox);
+                _form.Show();
+                Log("Debug console opened.");
+            }
+        }
+
+        public static void Log(string message)
+        {
+            if (!_enabled) return;
+
+            lock (_lock)
+            {
+                string line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
+                if (_form != null && !_form.IsDisposed && _textBox != null && !_textBox.IsDisposed)
+                {
+                    if (_textBox.InvokeRequired)
+                    {
+                        _textBox.Invoke(new Action(() =>
+                        {
+                            _textBox.AppendText(line + Environment.NewLine);
+                            _textBox.SelectionStart = _textBox.Text.Length;
+                            _textBox.ScrollToCaret();
+                        }));
+                    }
+                    else
+                    {
+                        _textBox.AppendText(line + Environment.NewLine);
+                        _textBox.SelectionStart = _textBox.Text.Length;
+                        _textBox.ScrollToCaret();
+                    }
+                }
+                // Also write to a log file as fallback
+                try
+                {
+                    string logPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "FireKeeper", "debug.log");
+                    Directory.CreateDirectory(Path.GetDirectoryName(logPath));
+                    File.AppendAllText(logPath, line + Environment.NewLine);
+                }
+                catch { }
+            }
+        }
+    }
+
     public class Config
     {
         public int BackupIntervalHours { get; set; }
@@ -1087,18 +1417,15 @@ namespace FireKeeper
             profilePanel.Controls.Add(profilePathBox);
 
             Button browseBtn = new Button();
-            browseBtn.Text = "📂 Browse...";
+            browseBtn.Text = "📂 Select Profile...";
             browseBtn.AutoSize = true;
             browseBtn.Font = new Font("Segoe UI", 9);
             browseBtn.Click += (s, e) =>
             {
-                using (FolderBrowserDialog dialog = new FolderBrowserDialog())
+                string selected = context.ShowProfileSelector("Select the Firefox profile to back up:");
+                if (!string.IsNullOrEmpty(selected))
                 {
-                    dialog.SelectedPath = config.FirefoxProfilePath;
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        profilePathBox.Text = dialog.SelectedPath;
-                    }
+                    profilePathBox.Text = selected;
                 }
             };
             profilePanel.Controls.Add(browseBtn);
