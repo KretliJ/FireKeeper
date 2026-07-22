@@ -1,0 +1,19 @@
+{
+  "IncludeFolders": [
+    "bookmarkbackups",
+    "browser-extension-data",
+    "places.sqlite",
+    "prefs.js",
+    "logins.json"
+  ],
+  "ExcludeFolders": [
+    "cache2",
+    "OfflineCache",
+    "weave"
+  ],
+  "ExcludeExtensions": [
+    ".lock",
+    ".tmp",
+    ".log"
+  ]
+}

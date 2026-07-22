@@ -1,55 +1,28 @@
-# Prerequisites
-*.d
+# Configuration files with secrets
+appsettings.json
+*.secrets.json
+*.local.json
 
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
+# User-specific configuration
+/appsettings.Development.json
+/appsettings.Production.json
 
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
+# Build output
+/bin/
+/obj/
+/publish/
 *.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+*.dll
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# Visual Studio
+.vs/
+*.user
+*.suo
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# IDE folders
+.idea/
+.vscode/
 
-# debug information files
-*.dwo
+# OS files
+Thumbs.db
+.DS_Store
