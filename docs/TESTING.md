@@ -10,7 +10,7 @@ FireKeeper includes comprehensive testing:
 dotnet test
 
 # Run only unit tests
-dotnet test --filter "TestCategory=Unit"
+dotnet test --filter "TestCategory=!Integration"
 
 # Run only integration tests
 dotnet test --filter "TestCategory=Integration"
