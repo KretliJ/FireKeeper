@@ -7,8 +7,9 @@
 /appsettings.Production.json
 
 # Build output
-/bin/
-/obj/
+**/bin/
+**/obj/
+**/TestResults/
 /publish/
 *.exe
 *.dll

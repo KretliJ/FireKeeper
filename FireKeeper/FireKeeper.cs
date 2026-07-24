@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Newtonsoft.Json;
+using Microsoft.Win32;
 
 namespace FireKeeper
 {
@@ -41,11 +42,60 @@ namespace FireKeeper
             ProgressUpdate?.Invoke(percent, status);
         }
 
-        private bool ShouldShowNotifications()
+        public bool ShouldShowNotifications()
         {
             return managerForm == null || managerForm.IsDisposed;
         }
 
+        private void CheckPendingBackupOnStartup()
+        {
+            if (string.IsNullOrEmpty(config.LastBackup)) return;
+            
+            DateTime lastTime = DateTime.ParseExact(config.LastBackup, "yyyyMMdd_HHmmss", null);
+            DateTime nextScheduled = lastTime.AddHours(config.BackupIntervalHours);
+            
+            if (DateTime.Now >= nextScheduled)
+            {
+                DebugConsole.Log("Pending backup detected. Running now...");
+                trayIcon.ShowBalloonTip(3000, APP_NAME, 
+                    "⏰ Pending backup detected. Running now...", 
+                    ToolTipIcon.Info);
+                _ = Task.Run(() => PerformBackup());
+            }
+        }
+
+        public static void SetStartup(bool enable)
+        {
+            try
+            {
+                using (var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
+                {
+                    if (key == null)
+                    {
+                        DebugConsole.Log("Failed to open Registry key for startup.");
+                        return;
+                    }
+
+                    if (enable)
+                    {
+                        key.SetValue("FireKeeper", Application.ExecutablePath);
+                        DebugConsole.Log($"Added FireKeeper to startup: {Application.ExecutablePath}");
+                    }
+                    else
+                    {
+                        if (key.GetValue("FireKeeper") != null)
+                        {
+                            key.DeleteValue("FireKeeper", false);
+                            DebugConsole.Log("Removed FireKeeper from startup.");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                DebugConsole.Log($"Error setting startup: {ex.Message}");
+            }
+        }
         // Backup selection rules - files and folders to include
         private static readonly HashSet<string> IncludeFolders = new HashSet<string>
         {
@@ -156,16 +206,43 @@ namespace FireKeeper
             menu.Items.Add("Exit", null, Exit);
             trayIcon.ContextMenuStrip = menu;
 
-            // Double-click opens the manager
             trayIcon.DoubleClick += (s, e) => OpenManager(s, e);
 
             // Start backup scheduler
             StartScheduler();
 
+            // ✅ Check for pending backup on startup
+            CheckPendingBackupOnStartup();
+
             // Show startup notification after a short delay
             ShowStartupNotification();
         }
 
+        
+        public void SetTestPaths(string profilePath, string backupPath)
+        {
+            if (config == null)
+            {
+                config = new Config();
+            }
+            config.FirefoxProfilePath = profilePath;
+            config.SyncFolderPath = backupPath;
+            config.MaxBackups = 10;
+        }
+
+        public BackupTrayContext(bool forTesting)
+        {
+            config = new Config
+            {
+                BackupIntervalHours = 24,
+                MaxBackups = 10,
+                FirefoxProfilePath = "",
+                SyncFolderPath = "",
+                IncludeFolders = new List<string>(),
+                ExcludeFolders = new List<string>(),
+                ExcludeExtensions = new List<string>()
+            };
+        }
         private void ToggleDebugConsole(object sender, EventArgs e)
         {
             DebugConsole.Toggle();
@@ -173,6 +250,8 @@ namespace FireKeeper
 
         private void LoadConfig()
         {
+            DebugConsole.Log($"Loading config from: {configPath}");
+            
             try
             {
                 if (File.Exists(configPath))
@@ -180,18 +259,49 @@ namespace FireKeeper
                     string json = File.ReadAllText(configPath);
                     config = JsonConvert.DeserializeObject<Config>(json);
                     
+                    DebugConsole.Log($"Loaded SyncFolderPath: '{config.SyncFolderPath}'");
+                    
+                    // Se SyncFolderPath for null ou vazio, criar Desktop default
                     if (string.IsNullOrEmpty(config.SyncFolderPath))
                     {
+                        DebugConsole.Log("SyncFolderPath is null or empty. Setting default...");
                         string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                         config.SyncFolderPath = Path.Combine(desktopPath, APP_NAME);
+                        DebugConsole.Log($"Default SyncFolderPath set to: '{config.SyncFolderPath}'");
                         SaveConfig();
+                    }
+                    else
+                    {
+                        // Verificar se a pasta existe
+                        if (Directory.Exists(config.SyncFolderPath))
+                        {
+                            DebugConsole.Log($"SyncFolderPath exists: '{config.SyncFolderPath}'");
+                        }
+                        else
+                        {
+                            DebugConsole.Log($"SyncFolderPath does NOT exist: '{config.SyncFolderPath}'");
+                            // Não sobrescrever automaticamente! Só criar a pasta.
+                            try
+                            {
+                                Directory.CreateDirectory(config.SyncFolderPath);
+                                DebugConsole.Log($"Created missing SyncFolder: '{config.SyncFolderPath}'");
+                            }
+                            catch (Exception ex)
+                            {
+                                DebugConsole.Log($"Failed to create SyncFolder: {ex.Message}");
+                            }
+                        }
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                DebugConsole.Log($"Error loading config: {ex.Message}");
+            }
 
             if (config == null)
             {
+                DebugConsole.Log("Config is null. Creating default config...");
                 string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 config = new Config
                 {
@@ -203,6 +313,7 @@ namespace FireKeeper
                     ExcludeFolders = ExcludeFolders.ToList(),
                     ExcludeExtensions = ExcludeExtensions.ToList()
                 };
+                DebugConsole.Log($"Default SyncFolderPath set to: '{config.SyncFolderPath}'");
                 SaveConfig();
             }
         }
@@ -212,6 +323,7 @@ namespace FireKeeper
             Directory.CreateDirectory(Path.GetDirectoryName(configPath));
             string json = JsonConvert.SerializeObject(config, Formatting.Indented);
             File.WriteAllText(configPath, json);
+            DebugConsole.Log($"Saved config. SyncFolderPath: '{config.SyncFolderPath}'");
         }
 
         public void SaveConfigChanges()
@@ -221,6 +333,7 @@ namespace FireKeeper
 
         public void RefreshConfig()
         {
+            DebugConsole.Log("RefreshConfig() called. Reloading config...");
             LoadConfig();
         }
 
@@ -259,7 +372,7 @@ namespace FireKeeper
             return Path.Combine(profilesPath, "default-release");
         }
 
-        private string ParseProfilesIni(string iniPath, string profilesPath)
+        public string ParseProfilesIni(string iniPath, string profilesPath)
         {
             string currentSection = null;
             string currentPath = null;
@@ -409,7 +522,7 @@ namespace FireKeeper
             await PerformBackup();
         }
 
-        private string GetSyncFolder()
+        public string GetSyncFolder()
         {
             if (!string.IsNullOrEmpty(config.SyncFolderPath))
             {
@@ -486,7 +599,7 @@ namespace FireKeeper
             }
         }
 
-        private void CreateBackupZip(string sourceDir, string destZip)
+        public void CreateBackupZip(string sourceDir, string destZip)
         {
             DebugConsole.Log($"=== CREATE BACKUP ZIP STARTED ===");
             DebugConsole.Log($"Source directory: {sourceDir}");
@@ -667,7 +780,7 @@ namespace FireKeeper
             }
         }
 
-        private bool ShouldIncludeFile(string relPath, HashSet<string> includeFolders)
+        public bool ShouldIncludeFile(string relPath, HashSet<string> includeFolders)
         {
             if (includeFolders == null || includeFolders.Count == 0)
                 return true;
@@ -703,7 +816,7 @@ namespace FireKeeper
             return false;
         }
 
-        private bool ShouldSkipFile(string relPath, HashSet<string> excludeFolders, HashSet<string> excludeExtensions)
+        public bool ShouldSkipFile(string relPath, HashSet<string> excludeFolders, HashSet<string> excludeExtensions)
         {
             if (relPath.EndsWith(".lock", StringComparison.OrdinalIgnoreCase))
                 return true;
@@ -734,7 +847,7 @@ namespace FireKeeper
             return false;
         }
 
-        private string GetRelativePath(string basePath, string fullPath)
+        public string GetRelativePath(string basePath, string fullPath)
         {
             if (!basePath.EndsWith("\\")) basePath += "\\";
             Uri baseUri = new Uri(basePath);
@@ -1086,7 +1199,7 @@ namespace FireKeeper
             }
         }
 
-        private void ClearProfileDirectory(string profilePath)
+        public void ClearProfileDirectory(string profilePath)
         {
             DebugConsole.Log($"ClearProfileDirectory called for: {profilePath}");
             var dirInfo = new DirectoryInfo(profilePath);
@@ -1176,7 +1289,7 @@ namespace FireKeeper
             return sb.ToString();
         }
 
-        private bool IsFirefoxRunning()
+        public bool IsFirefoxRunning()
         {
             try
             {
@@ -1219,6 +1332,43 @@ namespace FireKeeper
             };
             timer.Start();
         }
+
+        // Auxiliary test methods
+        public void SetMaxBackups(int maxBackups)
+        {
+            if (config != null)
+                config.MaxBackups = maxBackups;
+        }
+
+        public void CleanDirectory(string directory, int maxBackups)
+        {
+            try
+            {
+                if (!Directory.Exists(directory))
+                    return;
+
+                var backupFiles = Directory.GetFiles(directory, "firekeeper_backup_*.zip")
+                    .OrderBy(f => f)
+                    .ToList();
+
+                while (backupFiles.Count > maxBackups)
+                {
+                    File.Delete(backupFiles[0]);
+                    backupFiles.RemoveAt(0);
+                }
+            }
+            catch { }
+        }
+
+        // No BackupTrayContext (FireKeeper.cs)
+
+        public void SetSyncFolder(string path)
+        {
+            if (config != null)
+                config.SyncFolderPath = path;
+        }
+
+
     }
 
     public class Config
@@ -1437,6 +1587,21 @@ namespace FireKeeper
             progressBar.Style = ProgressBarStyle.Blocks;
         }
 
+        private bool IsInStartup()
+        {
+            try
+            {
+                using (var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run"))
+                {
+                    if (key == null) return false;
+                    return key.GetValue("FireKeeper") != null;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
         private void InitializeComponents()
         {
             this.Text = APP_NAME + " - Backup Manager";
@@ -1461,7 +1626,7 @@ namespace FireKeeper
             TableLayoutPanel mainPanel = new TableLayoutPanel();
             mainPanel.Dock = DockStyle.Fill;
             mainPanel.Padding = new Padding(20);
-            mainPanel.RowCount = 14;
+            mainPanel.RowCount = 15;
             mainPanel.ColumnCount = 2;
             mainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             mainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -1602,11 +1767,29 @@ namespace FireKeeper
             mainPanel.Controls.Add(new Label() { Text = "", Height = 2, BackColor = Color.LightGray }, 0, 8);
             mainPanel.SetColumnSpan(new Label() { Text = "" }, 2);
 
+            // Run on Startup
+            FlowLayoutPanel startupPanel = new FlowLayoutPanel();
+            startupPanel.FlowDirection = FlowDirection.LeftToRight;
+            startupPanel.AutoSize = true;
+
+            CheckBox startupCheck = new CheckBox();
+            startupCheck.Text = "Run FireKeeper when Windows starts";
+            startupCheck.Font = new Font("Segoe UI", 9);
+            startupCheck.AutoSize = true;
+
+            // Check if already in startup
+            startupCheck.Checked = IsInStartup();
+
+            startupPanel.Controls.Add(startupCheck);
+            mainPanel.Controls.Add(startupPanel, 0, 8);
+            mainPanel.SetColumnSpan(startupPanel, 2);
+
+
             Label progressTitle = new Label();
             progressTitle.Text = "📊 Progress:";
             progressTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             progressTitle.AutoSize = true;
-            mainPanel.Controls.Add(progressTitle, 0, 9);
+            mainPanel.Controls.Add(progressTitle, 0, 10);
             mainPanel.SetColumnSpan(progressTitle, 2);
 
             progressBar = new ProgressBar();
@@ -1616,7 +1799,7 @@ namespace FireKeeper
             progressBar.Value = 0;
             progressBar.Style = ProgressBarStyle.Blocks;
             progressBar.Height = 25;
-            mainPanel.Controls.Add(progressBar, 0, 10);
+            mainPanel.Controls.Add(progressBar, 0, 11);
             mainPanel.SetColumnSpan(progressBar, 2);
 
             progressLabel = new Label();
@@ -1624,7 +1807,7 @@ namespace FireKeeper
             progressLabel.Font = new Font("Segoe UI", 9);
             progressLabel.ForeColor = Color.Gray;
             progressLabel.AutoSize = true;
-            mainPanel.Controls.Add(progressLabel, 0, 11);
+            mainPanel.Controls.Add(progressLabel, 0, 12);
             mainPanel.SetColumnSpan(progressLabel, 2);
 
             FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
@@ -1645,6 +1828,9 @@ namespace FireKeeper
                 config.MaxBackups = (int)maxBackupsBox.Value;
                 config.FirefoxProfilePath = profilePathBox.Text;
                 config.SyncFolderPath = syncFolderBox.Text;
+                
+                // ✅ Save startup setting
+                BackupTrayContext.SetStartup(startupCheck.Checked);
                 
                 context.SaveConfigChanges();
                 
@@ -1728,7 +1914,7 @@ namespace FireKeeper
             };
             buttonPanel.Controls.Add(restoreBtn);
 
-            mainPanel.Controls.Add(buttonPanel, 0, 12);
+            mainPanel.Controls.Add(buttonPanel, 0, 13);
             mainPanel.SetColumnSpan(buttonPanel, 2);
 
             statusLabel = new Label();
@@ -1738,13 +1924,24 @@ namespace FireKeeper
             statusLabel.BackColor = Color.FromArgb(240, 240, 240);
             statusLabel.Padding = new Padding(5);
             statusLabel.Font = new Font("Segoe UI", 9);
-            mainPanel.Controls.Add(statusLabel, 0, 13);
+            mainPanel.Controls.Add(statusLabel, 0, 14);
             mainPanel.SetColumnSpan(statusLabel, 2);
             mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
 
             this.Controls.Add(mainPanel);
         }
 
+        private void ToggleStartup(bool enable)
+        {
+            using (var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
+            {
+                if (enable)
+                    key.SetValue("FireKeeper", Application.ExecutablePath);
+                else
+                    key.DeleteValue("FireKeeper", false);
+            }
+        }
+        
         private string GetDefaultSyncFolder()
         {
             if (!string.IsNullOrEmpty(config.SyncFolderPath))
@@ -1768,7 +1965,7 @@ namespace FireKeeper
             }
         }
 
-        private string GetSyncFolder()
+        public string GetSyncFolder()
         {
             string dir = !string.IsNullOrEmpty(config.SyncFolderPath)
                 ? config.SyncFolderPath

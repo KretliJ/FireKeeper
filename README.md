@@ -1,10 +1,11 @@
 # 🔥 FireKeeper
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/FireKeeper)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/yourusername/FireKeeper)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-orange.svg)]()
+[![Tests](<https://img.shields.io/badge/tests-28%20passing-brightgreen.svg>)]()
 
-![FireKeeper Logo](firekeeper.png)
+![FireKeeper Logo](FireKeeper/firekeeper.png)
 
 > **FireKeeper** - A lightweight, resource-efficient Firefox backup utility that automatically syncs your profile to anywhere you choose.
 
@@ -14,64 +15,71 @@
 
 - 🚀 **Lightweight** - ~5MB of RAM consumption, near-zero CPU when idle
 - 🔄 **Automatic Backups** - Configurable schedule (default: every 24 hours)
+- ⏰ **Pending Backup on Startup** - Missed backups run automatically when the app starts
 - 📁 **Smart Backup Selection** - Backs up only important files (bookmarks, passwords, history, extensions, settings)
 - 🚫 **Excludes Unnecessary Files** - Automatically skips cache, .lock files, and temporary files
 - 📥 **Restore from Backup** - One-click restore with automatic pre-restore backup
-- 🔒 **Safety First** - Checks if Firefox is running before restoring
 - 🎨 **System Tray Integration** - Runs silently in the background
+- 🚀 **Run on Startup** - Option to start automatically with Windows
+- 📊 **Progress Bar** - Visual feedback during backup and restore operations
+- 🐛 **Debug Console** - Toggle on/off from tray menu for troubleshooting
 - 🌍 **Default language** - English
 
 ---
 
 ## 🔄 Version History
 
-| Version | Breaking change / Minor / Patch         | Status                  |
-| ------- | --------------------------------------- | ----------------------- |
-| 1.0.0   | Initial commit with basic functionality | Superseded              |
-| 1.0.1   | Built-in Google Drive OAuth             | [Legacy](docs/LEGACY.md) |
-| 2.0.0   | OAuth dropped for Universal sync folder | Active                  |
+| Version | Breaking change / Minor / Patch                                                                                         | Status                  |
+| ------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| 1.0.0   | Initial commit with basic functionality                                                                                 | Superseded              |
+| 1.0.1   | Built-in Google Drive OAuth                                                                                             | [Legacy](docs/LEGACY.md) |
+| 2.0.0   | OAuth dropped for Universal sync folder, progress bar, debug console, clickable notifications, multi-profile selection | Superseded              |
+| 2.1.0   | Quality of Life Update: Run on startup, pending backups                                                                 | **Active**        |
+
+---
 
 ## 🗺️ Roadmap & Planned Features
 
 ### Technical Improvements
 
 - ⬜ Verify and correct technical debt and possible security issues
-- ⬜ Add extensive testing
-- ✅ Make it so double clicking icon tray brings up option manager (Implemented 1.0.1)
-- ⬜ Add run on system start option
-- ✅ Update backups to allow auto-delete (Implemented 2.0.0)
-- ⬜ Update backups to allow incremental backups
-- ✅ Update backups to allow backup retention policies (Implemented 2.0.0)
-- ⬜ Update restore to allow restoration of only bookmarks, passwords, or settings
-- ✅ Add options GUI menu to avoid constant changes to json configs (superseded by dynamic and internal configs in 2.0.0)
-- ⬜ Add backup integrity validation
-- ⬜ Add backup compression level to option
-- ✅ Add other cloud providers (superseded by architecture change in 2.0.0)
-- ⬜ Add drag and drop of a backup file to restore
-- ⬜ Add drag folder to set profile path
-- ⬜ Allow profile sharing between windows devices (complex)
+- ✅ Add extensive testing (28 unit tests + 8 integration tests)
+- ✅ Double-click tray icon opens manager (Implemented 1.0.1)
+- ✅ Run on system start option (Implemented 2.1.0)
+- ✅ Auto-delete old backups (Implemented 2.0.0)
+- ⬜ Incremental backups
+- ✅ Backup retention policies (Implemented 2.0.0)
+- ⬜ Selective restore (bookmarks only, passwords only, etc.)
+- ✅ GUI options menu (superseded by dynamic configs in 2.0.0)
+- ⬜ Backup integrity validation
+- ⬜ Backup compression level option
+- ✅ Other cloud providers (superseded by architecture change in 2.0.0)
+- ⬜ Drag and drop backup file to restore
+- ⬜ Drag folder to set profile path
+- ⬜ Profile sharing between Windows devices
 
 ### UX Improvements
 
-- ⬜ Add dark mode
-- ⬜ Add system language support
-- ⬜ Update UI renderer
-- ✅ Add progress bar
-- ✅ Add logging
-- ✅ Add progress tracking
-- ⬜ Add custom tray notifications
-- ⬜ Add step-by-step guide for new users
-- ⬜ Make sure the damn thing works before adding anything new
+- ⬜ Dark mode
+- ⬜ System language support
+- ⬜ UI renderer update
+- ✅ Progress bar (Implemented 2.0.0)
+- ✅ Debug logging (Implemented 2.0.0)
+- ✅ Progress tracking (Implemented 2.0.0)
+- ⬜ Custom tray notifications
+- ⬜ Step-by-step guide for new users
+- ✅ Clickable notifications (Implemented 2.0.0)
 
 ---
 
 ## 📋 Table of Contents
 
 - [Installation](#-installation)
-- [Resource consumption](#-system-resource-consumption)
+- [Resource Consumption](#-system-resource-consumption)
 - [Configuration](docs/CONFIG.md)
 - [Usage](docs/USAGE.md)
 - [Building from Source](docs/BUILDING.md)
+- [Testing](docs/TESTING.md)
 - [FAQ](docs/FAQ.md)
 - [Contributing](docs/CONTRIBUTING.md)
 - [Use of AI](docs/AI_ATTRIBUTION.md)
@@ -87,7 +95,7 @@
 
 ### Main Interface
 
-![Main Interface](docs/screenshots/main.png)
+![Main Interface](docs/screenshots/main.png) 
 
 ---
 
@@ -107,7 +115,7 @@ git clone https://github.com/yourusername/FireKeeper.git
 cd FireKeeper
 
 # Build
-dotnet build -c Release -f net48
+dotnet build -c Release -f net10.0-windows
 
 # Run
 dotnet run
