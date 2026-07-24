@@ -898,18 +898,18 @@ namespace FireKeeper
             if (managerForm == null || managerForm.IsDisposed)
             {
                 managerForm = new BackupManagerForm(config, this);
-                
-                // Subscribe to progress updates
                 ProgressUpdate += managerForm.UpdateProgress;
                 
-                // Clean up reference when form is closed
+                // ✅ Quando o form for fechado, só limpar a referência
                 managerForm.FormClosed += (s, args) =>
                 {
                     ProgressUpdate -= managerForm.UpdateProgress;
                     managerForm = null;
+                    
+                    // ✅ Não chamar Application.Exit() aqui!
+                    DebugConsole.Log("Manager form closed.");
                 };
             }
-            
             managerForm.Show();
             managerForm.BringToFront();
         }
@@ -926,61 +926,56 @@ namespace FireKeeper
 
         private void Exit(object sender, EventArgs e)
         {
+            DebugConsole.Log("Exit requested. Cleaning up...");
+            
             try
             {
-                // Check if manager is open
-                if (managerForm != null && !managerForm.IsDisposed && managerForm.Visible)
-                {
-                    var result = MessageBox.Show(
-                        "The Backup Manager window is still open.\n\n" +
-                        "Do you want to close it and exit FireKeeper?",
-                        APP_NAME,
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.No)
-                        return;
-                }
-
-                // Close manager
+                // 1. Close manager if open
                 if (managerForm != null && !managerForm.IsDisposed)
                 {
+                    DebugConsole.Log("Closing manager form...");
                     managerForm.Close();
                     managerForm.Dispose();
                     managerForm = null;
                 }
 
-                // Clean up tray - with null check
-                if (trayIcon != null)
-                {
-                    try
-                    {
-                        trayIcon.Visible = false;
-                        trayIcon.Dispose();
-                    }
-                    catch { }
-                    trayIcon = null;
-                }
-
-                // Clean up timer - with null check
+                // 2. Stop backup timer
                 if (backupTimer != null)
                 {
-                    try
-                    {
-                        backupTimer.Stop();
-                        backupTimer.Dispose();
-                    }
-                    catch { }
+                    DebugConsole.Log("Stopping backup timer...");
+                    backupTimer.Stop();
+                    backupTimer.Dispose();
                     backupTimer = null;
                 }
 
-                // Exit the application
+                // 3. Remove and free tray icon
+                if (trayIcon != null)
+                {
+                    DebugConsole.Log("Removing tray icon...");
+                    trayIcon.Visible = false;
+                    trayIcon.Dispose();
+                    trayIcon = null;
+                }
+
+                // 4. Wait to ensure all is freed
+                System.Threading.Thread.Sleep(100);
+
+                DebugConsole.Log("Calling Application.Exit()...");
                 Application.Exit();
+                
+                // 5. Fallback: force exit if Application.Exit() doesn't work
+                System.Threading.Thread.Sleep(200);
+                
+                // If still running, force
+                if (System.Diagnostics.Process.GetCurrentProcess().HasExited == false)
+                {
+                    DebugConsole.Log("Application.Exit() did not terminate. Forcing exit...");
+                    Environment.Exit(0);
+                }
             }
             catch (Exception ex)
             {
                 DebugConsole.Log($"Error during exit: {ex.Message}");
-                // Force exit if something goes wrong
                 Environment.Exit(0);
             }
         }
@@ -1360,15 +1355,11 @@ namespace FireKeeper
             catch { }
         }
 
-        // No BackupTrayContext (FireKeeper.cs)
-
         public void SetSyncFolder(string path)
         {
             if (config != null)
                 config.SyncFolderPath = path;
         }
-
-
     }
 
     public class Config
