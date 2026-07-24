@@ -74,6 +74,7 @@
 - [Building from Source](docs/BUILDING.md)
 - [FAQ](docs/FAQ.md)
 - [Contributing](docs/CONTRIBUTING.md)
+- [Use of AI](docs/AI_ATTRIBUTION.md)
 - [License](#-license)
 
 ---

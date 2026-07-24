@@ -35,3 +35,4 @@ Before submitting a PR:
 - Documentation is updated
 - No breaking changes without discussion
 - All tests pass (if applicable)
+- AI use is welcome, but not without scrutiny
