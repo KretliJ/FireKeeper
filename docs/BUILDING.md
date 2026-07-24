@@ -21,23 +21,18 @@ cd FireKeeper
 ### Build with Command Line
 
 # Restore dependencies
-
 dotnet restore
 
 # Build Release version
-
 dotnet build -c Release -f net48
 
 # Run the application
-
 dotnet run
 
 # Publish as single executable (recommended)
-
 dotnet publish -c Release -r win-x86 --self-contained false -p:PublishSingleFile=true
 
 # Output location:
-
 # bin\Release\net48\win-x86\publish\FireKeeper.exe
 
 ### Build Options
@@ -73,9 +68,7 @@ To distribute FireKeeper, you need:
 
 FireKeeper.exe                    ← Main executable
 firekeeper.ico                    ← Icon file
-appsettings.json                  ← User-provided credentials
 
 Optional:
-appsettings.example.json          ← Template for users
 README.md                         ← Documentation
 LICENSE                           ← License file

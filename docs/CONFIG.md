@@ -1,41 +1,15 @@
-
-## 📁 Configuration
-
-### `appsettings.json` (Google Drive Credentials)
-
-Create this file in the same folder as `FireKeeper.exe`:
-
-{
-  "GoogleDrive": {
-    "ClientId": "your_client_id.apps.googleusercontent.com",
-    "ClientSecret": "your_client_secret"
-  }
-}
-
-| Field        | Description                                            |
-| ------------ | ------------------------------------------------------ |
-| ClientId     | Your OAuth 2.0 Client ID from Google Cloud Console     |
-| ClientSecret | Your OAuth 2.0 Client Secret from Google Cloud Console |
-
-⚠️ Never share your Client Secret or commit this file to version control!
-
----
-
 ### `%APPDATA%\FireKeeper\config.json` (Application Settings)
 
 This file is automatically created by FireKeeper and stored in your user profile:
 
-Location: C:\Users\[YourUsername]\AppData\Roaming\FireKeeper\config.json
+Location: `C:\Users\[YourUsername]\AppData\Roaming\FireKeeper\config.json`
 
 {
   "BackupIntervalHours": 24,
   "MaxBackups": 10,
   "FirefoxProfilePath": "C:\\Users\\user\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\xxxx.default",
   "LastBackup": "20260121_153022",
-  "DriveClientId": "your_client_id.apps.googleusercontent.com",
-  "DriveClientSecret": "your_client_secret",
-  "DriveRefreshToken": "your_refresh_token",
-  "DriveFolderId": "your_google_drive_folder_id",
+  "SyncFolderPath": "C:\\Users\\user\\Desktop\\FireKeeper",
   "IncludeFolders": [
     "bookmarkbackups",
     "browser-extension-data",
@@ -90,21 +64,13 @@ Location: C:\Users\[YourUsername]\AppData\Roaming\FireKeeper\config.json
 
 #### Backup Settings
 
-| Field               | Type    | Description                               | Default        |
-| ------------------- | ------- | ----------------------------------------- | -------------- |
-| BackupIntervalHours | Integer | Hours between automatic backups           | 24             |
-| MaxBackups          | Integer | Maximum number of backups to keep locally | 10             |
-| FirefoxProfilePath  | String  | Path to your Firefox profile folder       | Auto-detected  |
-| LastBackup          | String  | Timestamp of the last successful backup   | Auto-generated |
-
-#### Google Drive Settings
-
-| Field             | Type   | Description                                         |
-| ----------------- | ------ | --------------------------------------------------- |
-| DriveClientId     | String | OAuth Client ID (auto-filled)                       |
-| DriveClientSecret | String | OAuth Client Secret (auto-filled)                   |
-| DriveRefreshToken | String | OAuth Refresh Token (auto-generated after auth)     |
-| DriveFolderId     | String | Google Drive folder ID for backups (auto-generated) |
+| Field               | Type    | Description                             | Default            |
+| ------------------- | ------- | --------------------------------------- | ------------------ |
+| BackupIntervalHours | Integer | Hours between automatic backups         | 24                 |
+| MaxBackups          | Integer | Maximum number of backups to keep       | 10                 |
+| FirefoxProfilePath  | String  | Path to your Firefox profile folder     | Auto-detected      |
+| LastBackup          | String  | Timestamp of the last successful backup | Auto-generated     |
+| SyncFolderPath      | String  | Folder where backups are stored         | Desktop\FireKeeper |
 
 #### Backup Selection Rules
 

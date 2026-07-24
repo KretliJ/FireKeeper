@@ -1,12 +1,12 @@
 # 🔥 FireKeeper
 
-[![Version](https://img.shields.io/badge/version-1.0.1-blue.svg)](https://github.com/yourusername/FireKeeper)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/yourusername/FireKeeper)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-orange.svg)]()
 
 ![FireKeeper Logo](firekeeper.png)
 
-> **FireKeeper** - A lightweight, resource-efficient Firefox backup utility that automatically syncs your profile to Google Drive.
+> **FireKeeper** - A lightweight, resource-efficient Firefox backup utility that automatically syncs your profile to anywhere you choose.
 
 ---
 
@@ -14,7 +14,6 @@
 
 - 🚀 **Lightweight** - ~5MB of RAM consumption, near-zero CPU when idle
 - 🔄 **Automatic Backups** - Configurable schedule (default: every 24 hours)
-- ☁️ **Google Drive Sync** - Cloud storage for backups
 - 📁 **Smart Backup Selection** - Backs up only important files (bookmarks, passwords, history, extensions, settings)
 - 🚫 **Excludes Unnecessary Files** - Automatically skips cache, .lock files, and temporary files
 - 📥 **Restore from Backup** - One-click restore with automatic pre-restore backup
@@ -24,42 +23,52 @@
 
 ---
 
+## 🔄 Version History
+
+| Version | Breaking change / Minor / Patch         | Status                  |
+| ------- | --------------------------------------- | ----------------------- |
+| 1.0.0   | Initial commit with basic functionality | Superseded              |
+| 1.0.1   | Built-in Google Drive OAuth             | [Legacy](docs/LEGACY.md) |
+| 2.0.0   | OAuth dropped for Universal sync folder | Active                  |
+
 ## 🗺️ Roadmap & Planned Features
 
 ### Technical Improvements
+
 - ⬜ Verify and correct technical debt and possible security issues
 - ⬜ Add extensive testing
-- ✅ Make it so double clicking icon tray brings up option manager
+- ✅ Make it so double clicking icon tray brings up option manager (Implemented 1.0.1)
 - ⬜ Add run on system start option
-- ⬜ Update backups to allow auto-delete
+- ✅ Update backups to allow auto-delete (Implemented 2.0.0)
 - ⬜ Update backups to allow incremental backups
-- ⬜ Update backups to allow backup retention policies
+- ✅ Update backups to allow backup retention policies (Implemented 2.0.0)
 - ⬜ Update restore to allow restoration of only bookmarks, passwords, or settings
-- ⬜ Add options GUI menu to avoid constant changes to json configs
+- ✅ Add options GUI menu to avoid constant changes to json configs (superseded by dynamic and internal configs in 2.0.0)
 - ⬜ Add backup integrity validation
 - ⬜ Add backup compression level to option
-- ⬜ Add other cloud providers
+- ✅ Add other cloud providers (superseded by architecture change in 2.0.0)
 - ⬜ Add drag and drop of a backup file to restore
 - ⬜ Add drag folder to set profile path
 - ⬜ Allow profile sharing between windows devices (complex)
 
 ### UX Improvements
+
 - ⬜ Add dark mode
 - ⬜ Add system language support
 - ⬜ Update UI renderer
-- ⬜ Add progress bar
+- ✅ Add progress bar
 - ✅ Add logging
-- ⬜ Add progress tracking
+- ✅ Add progress tracking
 - ⬜ Add custom tray notifications
 - ⬜ Add step-by-step guide for new users
-
 - ⬜ Make sure the damn thing works before adding anything new
+
 ---
 
 ## 📋 Table of Contents
 
 - [Installation](#-installation)
-- [Setup Guide](#-setup-guide)
+- [Resource consumption](#-system-resource-consumption)
 - [Configuration](docs/CONFIG.md)
 - [Usage](docs/USAGE.md)
 - [Building from Source](docs/BUILDING.md)
@@ -72,9 +81,11 @@
 ## 📸 Screenshots
 
 ### System Tray
+
 ![System Tray](docs/screenshots/tray.png)
 
 ### Main Interface
+
 ![Main Interface](docs/screenshots/main.png)
 
 ---
@@ -101,55 +112,20 @@ dotnet build -c Release -f net48
 dotnet run
 ```
 
-## ⚙️ Setup Guide
-
-### 1. Google Drive Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or select existing)
-3. Enable the **Google Drive API**
-4. Configure the **OAuth consent screen**:
-   - App name: `FireKeeper`
-   - User support email: your email
-   - Scopes: `.../auth/drive.file`
-   - Add your email as a **test user**
-5. Create **OAuth Client ID** (Desktop app type)
-6. Copy your **Client ID** and **Client Secret**
-
-### 2. Configure FireKeeper
-
-Rename `appsettings.example.json` (in the same folder as FireKeeper.exe) to `appsettings.json`.
-
-Paste here your ClientId and ClientSecret generated from your OAuth:
-
-```json
-{
-  "GoogleDrive": {
-    "ClientId": "your_client_id.apps.googleusercontent.com",
-    "ClientSecret": "your_client_secret"
-  }
-}
-```
-
-### 3. First Run
-
-1. Launch FireKeeper.exe
-2. Right click tray icon > Open Manager
-3. Click "Connect Google Account"
-4. Authorize the app in your browser
-5. Done! Your Firefox profile will now be backed up automatically
-
 ---
 
-## [📁 Configuration](docs/CONFIG.md)
+## 💻 System Resource Consumption
 
-## [🎯 Usage](docs/USAGE.md)
+| Metric                | Value                                                       |
+| --------------------- | ----------------------------------------------------------- |
+| Background RAM        | ~31 MB                                                      |
+| Backup RAM            | ~36 MB                                                      |
+| Restore RAM           | ~38 MB                                                      |
+| Disk Read/Write Speed | May vary with hardware                                      |
+| CPU Usage (idle)      | Near 0%. May vary with hardware                             |
+| CPU Usage (backup)    | Temporary spikes during compression. May vary with hardware |
 
-## [🏗️ Building from Source](docs/BUILDING.md)
-
-## [❓ General Questions](docs/FAQ.md)
-
-## [➕ How to Contribute](docs/CONTRIBUTING.md)
+FireKeeper is designed to be lightweight and run silently in the background without significantly impacting your system performance.
 
 ---
 
@@ -163,6 +139,24 @@ This is open to feature suggestions! Please:
 - Provide examples of usage
 
 ---
+
+## ⚠️ IMPORTANT WARNING
+
+FireKeeper backs up your **entire Firefox profile**, including passwords, sessions, and cookies.
+
+🔒 **Treat your backup files like your house keys.**
+
+DO NOT share your backups with anyone, upload them to public storage, or leave them in shared computers.
+
+**What happens when you restore?**
+
+- Some sites will keep you logged in (forums, dev tools, LLM SaaS)
+- Some sites (as they should) will ask you to log in again (Google, Meta, banks)
+- This is a **security feature**, not a failure
+
+If someone else gets your backup, they can access everything in your browser.
+
+**You are responsible for your own data. FireKeeper is a tool. Use it wisely.**
 
 ## 📝 License
 

@@ -9,7 +9,7 @@ namespace FireKeeper
     public static class ConfigManager
     {
         private static string ConfigPath => Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, 
+            AppDomain.CurrentDomain.BaseDirectory,
             "appsettings.json"
         );
 
@@ -19,7 +19,7 @@ namespace FireKeeper
             "appsettings.json"
         );
 
-        public static GoogleDriveConfig GetGoogleDriveConfig()
+        public static AppSettings GetAppSettings()
         {
             // Try to load from user config first (AppData)
             if (File.Exists(UserConfigPath))
@@ -28,7 +28,7 @@ namespace FireKeeper
                 {
                     string json = File.ReadAllText(UserConfigPath);
                     var result = JsonConvert.DeserializeObject<JObject>(json);
-                    return result["GoogleDrive"].ToObject<GoogleDriveConfig>();
+                    return result.ToObject<AppSettings>() ?? new AppSettings();
                 }
                 catch { }
             }
@@ -40,61 +40,26 @@ namespace FireKeeper
                 {
                     string json = File.ReadAllText(ConfigPath);
                     var result = JsonConvert.DeserializeObject<JObject>(json);
-                    return result["GoogleDrive"].ToObject<GoogleDriveConfig>();
+                    return result.ToObject<AppSettings>() ?? new AppSettings();
                 }
                 catch { }
             }
 
-            // If no config found, check environment variables
-            string clientId = Environment.GetEnvironmentVariable("FIREKEEPER_GOOGLE_CLIENT_ID");
-            string clientSecret = Environment.GetEnvironmentVariable("FIREKEEPER_GOOGLE_CLIENT_SECRET");
-
-            if (!string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(clientSecret))
-            {
-                return new GoogleDriveConfig
-                {
-                    ClientId = clientId,
-                    ClientSecret = clientSecret
-                };
-            }
-
-            throw new Exception(
-                "Google Drive credentials not found!\n\n" +
-                "Please create one of the following:\n" +
-                "1. Copy appsettings.example.json to appsettings.json and add your credentials\n" +
-                "2. Or set environment variables:\n" +
-                "   - FIREKEEPER_GOOGLE_CLIENT_ID\n" +
-                "   - FIREKEEPER_GOOGLE_CLIENT_SECRET"
-            );
+            return new AppSettings();
         }
 
-        public static void SaveUserConfig(GoogleDriveConfig config)
+        public static void SaveUserConfig(AppSettings settings)
         {
             string directory = Path.GetDirectoryName(UserConfigPath);
             Directory.CreateDirectory(directory);
 
-            var json = new
-            {
-                GoogleDrive = new
-                {
-                    config.ClientId,
-                    config.ClientSecret
-                }
-            };
-
-            string jsonString = JsonConvert.SerializeObject(json, Formatting.Indented);
+            string jsonString = JsonConvert.SerializeObject(settings, Formatting.Indented);
             File.WriteAllText(UserConfigPath, jsonString);
         }
     }
 
-    public class GoogleDriveConfig
+    public class AppSettings
     {
-        public string ClientId { get; set; }
-        public string ClientSecret { get; set; }
         public bool DebugEnabled { get; set; }
-
-        public bool IsValid => 
-            !string.IsNullOrEmpty(ClientId) && 
-            !string.IsNullOrEmpty(ClientSecret);
     }
 }

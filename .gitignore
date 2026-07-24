@@ -1,5 +1,4 @@
 # Configuration files with secrets
-appsettings.json
 *.secrets.json
 *.local.json
 
