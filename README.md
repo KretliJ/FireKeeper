@@ -29,12 +29,12 @@
 
 ## 🔄 Version History
 
-| Version | Breaking change / Minor / Patch                                                                                         | Status                  |
-| ------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1.0.0   | Initial commit with basic functionality                                                                                 | Legacy                  |
-| 1.0.1   | Built-in Google Drive OAuth                                                                                             | [Legacy](docs/LEGACY.md) |
-| 2.0.0   | OAuth dropped for Universal sync folder, progress bar, debug console, clickable notifications, multi-profile selection | Superseded              |
-| 2.1.0   | Quality of Life Update: Testing, refactor to .NET 10, improved project structure, fixed minor bugs                      | **Active**        |
+| Version | Breaking change / Minor / Patch                                                                                         | Status                                |
+| ------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| 1.0.0   | Initial commit with basic functionality                                                                                 | Deprecated                            |
+| 1.0.1   | Built-in Google Drive OAuth                                                                                             | [Legacy](docs/LEGACY.md) / Deprecated |
+| 2.0.0   | OAuth dropped for Universal sync folder, progress bar, debug console, clickable notifications, multi-profile selection | Superseded                            |
+| 2.1.0   | Quality of Life Update: Testing, refactor to .NET 10, improved project structure, fixed minor bugs                      | **Active**                      |
 
 ---
 
