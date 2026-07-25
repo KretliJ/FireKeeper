@@ -34,7 +34,8 @@
 | 1.0.0   | Initial commit with basic functionality                                                                                 | Deprecated                            |
 | 1.0.1   | Built-in Google Drive OAuth                                                                                             | [Legacy](docs/LEGACY.md) / Deprecated |
 | 2.0.0   | OAuth dropped for Universal sync folder, progress bar, debug console, clickable notifications, multi-profile selection | Superseded                            |
-| 2.1.0   | Quality of Life Update: Testing, refactor to .NET 10, improved project structure, fixed minor bugs                      | **Active**                      |
+| 2.1.0   | Quality of Life Update: Testing, refactor to .NET 10, improved project structure, fixed minor bugs                      | Superseded                            |
+| 2.2.0   | Implemented dark mode                                                                                                   | **Active**                      |
 
 ---
 
@@ -60,7 +61,7 @@
 
 ### UX Improvements
 
-- ⬜ Dark mode
+- ✅ Dark mode (initial implementation 2.2.0)
 - ⬜ System language support
 - ⬜ UI renderer update
 - ✅ Progress bar (Implemented 2.0.0)
