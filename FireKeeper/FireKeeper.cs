@@ -15,6 +15,117 @@ using Microsoft.Win32;
 
 namespace FireKeeper
 {
+    public static class ThemeManager
+    {
+        // Cores para cada modo (pode ajustar)
+        public static Color BackColorLight = SystemColors.Control;
+        public static Color ForeColorLight = SystemColors.ControlText;
+        public static Color ControlBackLight = SystemColors.Window;
+        public static Color ControlForeLight = SystemColors.WindowText;
+        public static Color ButtonBackLight = SystemColors.Control;
+        public static Color ButtonForeLight = SystemColors.ControlText;
+
+        public static Color BackColorDark = Color.FromArgb(30, 30, 30);
+        public static Color ForeColorDark = Color.White;
+        public static Color ControlBackDark = Color.FromArgb(45, 45, 45);
+        public static Color ControlForeDark = Color.White;
+        public static Color ButtonBackDark = Color.FromArgb(70, 70, 70);
+        public static Color ButtonForeDark = Color.White;
+
+        /// <summary>
+        /// Aplica o tema (cores) a todos os controles do formulário.
+        /// </summary>
+        public static void ApplyThemeToForm(Form form, bool isDark)
+        {
+            if (form == null) return;
+
+            Color backColor = isDark ? BackColorDark : BackColorLight;
+            Color foreColor = isDark ? ForeColorDark : ForeColorLight;
+            Color controlBack = isDark ? ControlBackDark : ControlBackLight;
+            Color controlFore = isDark ? ControlForeDark : ControlForeLight;
+            Color buttonBack = isDark ? ButtonBackDark : ButtonBackLight;
+            Color buttonFore = isDark ? ButtonForeDark : ButtonForeLight;
+
+            form.BackColor = backColor;
+            form.ForeColor = foreColor;
+
+            ApplyToControls(form, backColor, foreColor, controlBack, controlFore, buttonBack, buttonFore);
+        }
+
+        private static void ApplyToControls(Control parent, Color backColor, Color foreColor,
+                                            Color controlBack, Color controlFore, Color buttonBack, Color buttonFore)
+        {
+            foreach (Control ctrl in GetAllControls(parent))
+            {
+                if (ctrl is Label)
+                {
+                    ctrl.BackColor = backColor;
+                    ctrl.ForeColor = foreColor;
+                }
+                else if (ctrl is TextBox || ctrl is NumericUpDown || ctrl is ComboBox || ctrl is ListBox)
+                {
+                    ctrl.BackColor = controlBack;
+                    ctrl.ForeColor = controlFore;
+                }
+                else if (ctrl is Button)
+                {
+                    ctrl.BackColor = buttonBack;
+                    ctrl.ForeColor = buttonFore;
+                    // Aplica arredondamento a todos os botões
+                    ApplyRoundedCorners(ctrl);
+                }
+                else if (ctrl is CheckBox)
+                {
+                    ctrl.BackColor = backColor;
+                    ctrl.ForeColor = foreColor;
+                }
+                else if (ctrl is Panel || ctrl is TableLayoutPanel || ctrl is FlowLayoutPanel || ctrl is GroupBox)
+                {
+                    ctrl.BackColor = backColor;
+                    ctrl.ForeColor = foreColor;
+                }
+                else if (ctrl is ProgressBar)
+                {
+                    ctrl.BackColor = controlBack;
+                    ctrl.ForeColor = foreColor;
+                }
+            }
+        }
+
+        private static IEnumerable<Control> GetAllControls(Control parent)
+        {
+            foreach (Control c in parent.Controls)
+            {
+                yield return c;
+                foreach (Control child in GetAllControls(c))
+                    yield return child;
+            }
+        }
+
+        /// <summary>
+        /// Aplica cantos arredondados a um controle (botões, caixas de texto, etc.).
+        /// </summary>
+        public static void ApplyRoundedCorners(Control control, int radius = 8)
+        {
+            if (control == null || control.IsDisposed) return;
+            if (control.Width < 2 || control.Height < 2) return;
+
+            if (control.Width < radius * 2 || control.Height < radius * 2)
+                radius = Math.Min(control.Width, control.Height) / 2;
+            if (radius < 1) radius = 1;
+
+            using (GraphicsPath path = new GraphicsPath())
+            {
+                path.AddArc(0, 0, radius, radius, 180, 90);
+                path.AddArc(control.Width - radius, 0, radius, radius, 270, 90);
+                path.AddArc(control.Width - radius, control.Height - radius, radius, radius, 0, 90);
+                path.AddArc(0, control.Height - radius, radius, radius, 90, 90);
+                path.CloseFigure();
+                control.Region = new Region(path);
+            }
+        }
+    }
+
     static class Program
     {
         [STAThread]
@@ -311,7 +422,8 @@ namespace FireKeeper
                     SyncFolderPath = Path.Combine(desktopPath, APP_NAME),
                     IncludeFolders = IncludeFolders.ToList(),
                     ExcludeFolders = ExcludeFolders.ToList(),
-                    ExcludeExtensions = ExcludeExtensions.ToList()
+                    ExcludeExtensions = ExcludeExtensions.ToList(),
+                    Theme = "Light" // padrão claro
                 };
                 DebugConsole.Log($"Default SyncFolderPath set to: '{config.SyncFolderPath}'");
                 SaveConfig();
@@ -1067,6 +1179,9 @@ namespace FireKeeper
                 selector.AcceptButton = okBtn;
                 selector.CancelButton = cancelBtn;
 
+                bool isDark = config?.Theme == "Dark";
+                ThemeManager.ApplyThemeToForm(selector, isDark);
+
                 DialogResult result = selector.ShowDialog();
                 if (result == DialogResult.OK && listBox.SelectedIndex >= 0)
                 {
@@ -1372,6 +1487,7 @@ namespace FireKeeper
         public List<string> IncludeFolders { get; set; }
         public List<string> ExcludeFolders { get; set; }
         public List<string> ExcludeExtensions { get; set; }
+        public string Theme { get; set; } = "Light"; // Tema: "Light" ou "Dark"
     }
 
     public static class DebugConsole
@@ -1420,6 +1536,24 @@ namespace FireKeeper
                     e.Cancel = true;
                     _form.Hide();
                 };
+
+                // Aplicar tema
+                try
+                {
+                    string configPath = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                        "FireKeeper", "config.json");
+                    if (File.Exists(configPath))
+                    {
+                        string json = File.ReadAllText(configPath);
+                        var config = JsonConvert.DeserializeObject<Config>(json);
+                        bool isDark = config?.Theme == "Dark";
+                        ThemeManager.ApplyThemeToForm(_form, isDark);
+                        // O TextBox mantém suas cores originais (preto/verde) - não sobrescrever
+                    }
+                }
+                catch { }
+
                 _form.Show();
                 _isVisible = true;
                 Log("Debug console opened.");
@@ -1441,13 +1575,9 @@ namespace FireKeeper
         public static void Toggle()
         {
             if (_isVisible)
-            {
                 Hide();
-            }
             else
-            {
                 Show();
-            }
         }
 
         public static void Log(string message)
@@ -1455,7 +1585,7 @@ namespace FireKeeper
             lock (_lock)
             {
                 string line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}";
-                
+
                 if (_form != null && !_form.IsDisposed && _textBox != null && !_textBox.IsDisposed)
                 {
                     if (_textBox.InvokeRequired)
@@ -1474,7 +1604,7 @@ namespace FireKeeper
                         _textBox.ScrollToCaret();
                     }
                 }
-                
+
                 try
                 {
                     string logPath = Path.Combine(
@@ -1532,6 +1662,8 @@ namespace FireKeeper
         private Button backupNowBtn;
         private Button restoreBtn;
         private Button saveBtn;
+        private Button btnToggleTheme;
+        private TableLayoutPanel mainPanel;
         private const string APP_NAME = "FireKeeper";
 
         public BackupManagerForm(Config cfg, BackupTrayContext ctx)
@@ -1539,6 +1671,8 @@ namespace FireKeeper
             config = cfg;
             context = ctx;
             InitializeComponents();
+            ApplyTheme();
+            this.Resize += BackupManagerForm_Resize;
         }
 
         public void UpdateProgress(int percent, string status)
@@ -1593,6 +1727,7 @@ namespace FireKeeper
                 return false;
             }
         }
+
         private void InitializeComponents()
         {
             this.Text = APP_NAME + " - Backup Manager";
@@ -1614,17 +1749,20 @@ namespace FireKeeper
                 this.Icon = GetDefaultIcon();
             }
 
-            TableLayoutPanel mainPanel = new TableLayoutPanel();
+            mainPanel = new TableLayoutPanel();
             mainPanel.Dock = DockStyle.Fill;
             mainPanel.Padding = new Padding(20);
             mainPanel.RowCount = 15;
-            mainPanel.ColumnCount = 2;
+            mainPanel.ColumnCount = 3;
             mainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             mainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            mainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
+            // Linha 0: título + botão de tema
             FlowLayoutPanel titlePanel = new FlowLayoutPanel();
             titlePanel.FlowDirection = FlowDirection.LeftToRight;
             titlePanel.AutoSize = true;
+            titlePanel.Dock = DockStyle.Fill;
 
             Label titleLabel = new Label();
             titleLabel.Text = "🔥 " + APP_NAME;
@@ -1643,9 +1781,28 @@ namespace FireKeeper
             mainPanel.Controls.Add(titlePanel, 0, 0);
             mainPanel.SetColumnSpan(titlePanel, 2);
 
-            mainPanel.Controls.Add(new Label() { Text = "", Height = 2, BackColor = Color.LightGray }, 0, 1);
-            mainPanel.SetColumnSpan(new Label() { Text = "" }, 2);
+            btnToggleTheme = new Button();
+            btnToggleTheme.Text = config.Theme == "Dark" ? "☀️" : "🌙";
+            btnToggleTheme.Size = new Size(50, 30);
+            btnToggleTheme.FlatStyle = FlatStyle.Flat;
+            btnToggleTheme.FlatAppearance.BorderSize = 1;
+            btnToggleTheme.Font = new Font("Segoe UI", 12);
+            btnToggleTheme.Click += (s, e) =>
+            {
+                config.Theme = config.Theme == "Light" ? "Dark" : "Light";
+                btnToggleTheme.Text = config.Theme == "Dark" ? "☀️" : "🌙";
+                ApplyTheme();
+                context.SaveConfigChanges();
+            };
+            btnToggleTheme.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            mainPanel.Controls.Add(btnToggleTheme, 2, 0);
 
+            // Separador 1
+            Label separator1 = new Label() { Text = "", Height = 2, BackColor = Color.LightGray };
+            mainPanel.Controls.Add(separator1, 0, 1);
+            mainPanel.SetColumnSpan(separator1, 3);
+
+            // Linha 2: profile
             Label profileLabel = new Label();
             profileLabel.Text = "📁 Firefox Profile:";
             profileLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
@@ -1678,7 +1835,9 @@ namespace FireKeeper
             profilePanel.Controls.Add(browseProfileBtn);
 
             mainPanel.Controls.Add(profilePanel, 1, 2);
+            mainPanel.SetColumnSpan(profilePanel, 2);
 
+            // Linha 3: sync folder
             Label folderLabel = new Label();
             folderLabel.Text = "☁️ Sync Folder:";
             folderLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
@@ -1716,17 +1875,22 @@ namespace FireKeeper
             folderPanel.Controls.Add(browseFolderBtn);
 
             mainPanel.Controls.Add(folderPanel, 1, 3);
+            mainPanel.SetColumnSpan(folderPanel, 2);
 
-            mainPanel.Controls.Add(new Label() { Text = "", Height = 2, BackColor = Color.LightGray }, 0, 4);
-            mainPanel.SetColumnSpan(new Label() { Text = "" }, 2);
+            // Separador 2
+            Label separator2 = new Label() { Text = "", Height = 2, BackColor = Color.LightGray };
+            mainPanel.Controls.Add(separator2, 0, 4);
+            mainPanel.SetColumnSpan(separator2, 3);
 
+            // Título settings
             Label settingsLabel = new Label();
             settingsLabel.Text = "⚙️ Backup Settings:";
             settingsLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             settingsLabel.AutoSize = true;
             mainPanel.Controls.Add(settingsLabel, 0, 5);
-            mainPanel.SetColumnSpan(settingsLabel, 2);
+            mainPanel.SetColumnSpan(settingsLabel, 3);
 
+            // Intervalo
             FlowLayoutPanel intervalPanel = new FlowLayoutPanel();
             intervalPanel.FlowDirection = FlowDirection.LeftToRight;
             intervalPanel.AutoSize = true;
@@ -1739,8 +1903,9 @@ namespace FireKeeper
             intervalBox.Font = new Font("Segoe UI", 9);
             intervalPanel.Controls.Add(intervalBox);
             mainPanel.Controls.Add(intervalPanel, 0, 6);
-            mainPanel.SetColumnSpan(intervalPanel, 2);
+            mainPanel.SetColumnSpan(intervalPanel, 3);
 
+            // Max backups
             FlowLayoutPanel maxPanel = new FlowLayoutPanel();
             maxPanel.FlowDirection = FlowDirection.LeftToRight;
             maxPanel.AutoSize = true;
@@ -1753,12 +1918,14 @@ namespace FireKeeper
             maxBackupsBox.Font = new Font("Segoe UI", 9);
             maxPanel.Controls.Add(maxBackupsBox);
             mainPanel.Controls.Add(maxPanel, 0, 7);
-            mainPanel.SetColumnSpan(maxPanel, 2);
+            mainPanel.SetColumnSpan(maxPanel, 3);
 
-            mainPanel.Controls.Add(new Label() { Text = "", Height = 2, BackColor = Color.LightGray }, 0, 8);
-            mainPanel.SetColumnSpan(new Label() { Text = "" }, 2);
+            // Separador 3
+            Label separator3 = new Label() { Text = "", Height = 2, BackColor = Color.LightGray };
+            mainPanel.Controls.Add(separator3, 0, 8);
+            mainPanel.SetColumnSpan(separator3, 3);
 
-            // Run on Startup
+            // Startup
             FlowLayoutPanel startupPanel = new FlowLayoutPanel();
             startupPanel.FlowDirection = FlowDirection.LeftToRight;
             startupPanel.AutoSize = true;
@@ -1767,22 +1934,21 @@ namespace FireKeeper
             startupCheck.Text = "Run FireKeeper when Windows starts";
             startupCheck.Font = new Font("Segoe UI", 9);
             startupCheck.AutoSize = true;
-
-            // Check if already in startup
             startupCheck.Checked = IsInStartup();
 
             startupPanel.Controls.Add(startupCheck);
-            mainPanel.Controls.Add(startupPanel, 0, 8);
-            mainPanel.SetColumnSpan(startupPanel, 2);
+            mainPanel.Controls.Add(startupPanel, 0, 9);
+            mainPanel.SetColumnSpan(startupPanel, 3);
 
-
+            // Progress title
             Label progressTitle = new Label();
             progressTitle.Text = "📊 Progress:";
             progressTitle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
             progressTitle.AutoSize = true;
             mainPanel.Controls.Add(progressTitle, 0, 10);
-            mainPanel.SetColumnSpan(progressTitle, 2);
+            mainPanel.SetColumnSpan(progressTitle, 3);
 
+            // Progress bar
             progressBar = new ProgressBar();
             progressBar.Dock = DockStyle.Fill;
             progressBar.Minimum = 0;
@@ -1791,16 +1957,18 @@ namespace FireKeeper
             progressBar.Style = ProgressBarStyle.Blocks;
             progressBar.Height = 25;
             mainPanel.Controls.Add(progressBar, 0, 11);
-            mainPanel.SetColumnSpan(progressBar, 2);
+            mainPanel.SetColumnSpan(progressBar, 3);
 
+            // Label progresso
             progressLabel = new Label();
             progressLabel.Text = "Ready";
             progressLabel.Font = new Font("Segoe UI", 9);
             progressLabel.ForeColor = Color.Gray;
             progressLabel.AutoSize = true;
             mainPanel.Controls.Add(progressLabel, 0, 12);
-            mainPanel.SetColumnSpan(progressLabel, 2);
+            mainPanel.SetColumnSpan(progressLabel, 3);
 
+            // Botões de ação
             FlowLayoutPanel buttonPanel = new FlowLayoutPanel();
             buttonPanel.FlowDirection = FlowDirection.RightToLeft;
             buttonPanel.AutoSize = true;
@@ -1813,18 +1981,15 @@ namespace FireKeeper
             saveBtn.BackColor = Color.FromArgb(76, 175, 80);
             saveBtn.ForeColor = Color.White;
             saveBtn.FlatStyle = FlatStyle.Flat;
+            saveBtn.FlatAppearance.BorderSize = 0;
             saveBtn.Click += (s, e) =>
             {
                 config.BackupIntervalHours = (int)intervalBox.Value;
                 config.MaxBackups = (int)maxBackupsBox.Value;
                 config.FirefoxProfilePath = profilePathBox.Text;
                 config.SyncFolderPath = syncFolderBox.Text;
-                
-                // ✅ Save startup setting
                 BackupTrayContext.SetStartup(startupCheck.Checked);
-                
                 context.SaveConfigChanges();
-                
                 MessageBox.Show("✅ Settings saved successfully!", APP_NAME,
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
@@ -1837,6 +2002,7 @@ namespace FireKeeper
             backupNowBtn.BackColor = Color.FromArgb(255, 152, 0);
             backupNowBtn.ForeColor = Color.White;
             backupNowBtn.FlatStyle = FlatStyle.Flat;
+            backupNowBtn.FlatAppearance.BorderSize = 0;
             backupNowBtn.Click += async (s, e) =>
             {
                 backupNowBtn.Enabled = false;
@@ -1874,6 +2040,7 @@ namespace FireKeeper
             restoreBtn.BackColor = Color.FromArgb(255, 87, 34);
             restoreBtn.ForeColor = Color.White;
             restoreBtn.FlatStyle = FlatStyle.Flat;
+            restoreBtn.FlatAppearance.BorderSize = 0;
             restoreBtn.Click += async (s, e) =>
             {
                 using (OpenFileDialog dialog = new OpenFileDialog())
@@ -1906,8 +2073,9 @@ namespace FireKeeper
             buttonPanel.Controls.Add(restoreBtn);
 
             mainPanel.Controls.Add(buttonPanel, 0, 13);
-            mainPanel.SetColumnSpan(buttonPanel, 2);
+            mainPanel.SetColumnSpan(buttonPanel, 3);
 
+            // Status
             statusLabel = new Label();
             statusLabel.Text = "✅ Ready";
             statusLabel.Dock = DockStyle.Bottom;
@@ -1916,23 +2084,74 @@ namespace FireKeeper
             statusLabel.Padding = new Padding(5);
             statusLabel.Font = new Font("Segoe UI", 9);
             mainPanel.Controls.Add(statusLabel, 0, 14);
-            mainPanel.SetColumnSpan(statusLabel, 2);
+            mainPanel.SetColumnSpan(statusLabel, 3);
             mainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
 
             this.Controls.Add(mainPanel);
+
+            // Aplica arredondamento inicial em botões específicos
+            ThemeManager.ApplyRoundedCorners(saveBtn);
+            ThemeManager.ApplyRoundedCorners(backupNowBtn);
+            ThemeManager.ApplyRoundedCorners(restoreBtn);
+            ThemeManager.ApplyRoundedCorners(btnToggleTheme);
+            ThemeManager.ApplyRoundedCorners(browseProfileBtn);
+            ThemeManager.ApplyRoundedCorners(browseFolderBtn);
         }
 
-        private void ToggleStartup(bool enable)
+        private void BackupManagerForm_Resize(object sender, EventArgs e)
         {
-            using (var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
+            // Reaplicar arredondamento após redimensionar
+            foreach (Control ctrl in GetAllControls(this))
             {
-                if (enable)
-                    key.SetValue("FireKeeper", Application.ExecutablePath);
-                else
-                    key.DeleteValue("FireKeeper", false);
+                if (ctrl is Button || ctrl is TextBox)
+                    ThemeManager.ApplyRoundedCorners(ctrl, 8);
             }
         }
-        
+
+        // --- MÉTODOS DE TEMA E ARREDONDAMENTO ---
+
+        private void ApplyTheme()
+        {
+            if (mainPanel == null) return;
+
+            bool isDark = config.Theme == "Dark";
+            ThemeManager.ApplyThemeToForm(this, isDark);
+
+            // Ajusta os botões especiais (cores fixas)
+            saveBtn.BackColor = isDark ? Color.FromArgb(0, 120, 0) : Color.FromArgb(76, 175, 80);
+            saveBtn.ForeColor = Color.White;
+
+            backupNowBtn.BackColor = isDark ? Color.FromArgb(200, 120, 0) : Color.FromArgb(255, 152, 0);
+            backupNowBtn.ForeColor = Color.White;
+
+            restoreBtn.BackColor = isDark ? Color.FromArgb(180, 50, 0) : Color.FromArgb(255, 87, 34);
+            restoreBtn.ForeColor = Color.White;
+
+            btnToggleTheme.BackColor = isDark ? Color.FromArgb(60, 60, 60) : SystemColors.Control;
+            btnToggleTheme.ForeColor = isDark ? Color.White : SystemColors.ControlText;
+
+            // Separadores (linhas cinzas)
+            foreach (Control ctrl in mainPanel.Controls)
+            {
+                if (ctrl is Label && ctrl.Height == 2 && ctrl.BackColor == Color.LightGray)
+                {
+                    ctrl.BackColor = isDark ? Color.FromArgb(80, 80, 80) : Color.LightGray;
+                }
+            }
+        }
+
+        private IEnumerable<Control> GetAllControls(Control parent)
+        {
+            foreach (Control c in parent.Controls)
+            {
+                yield return c;
+                foreach (Control child in GetAllControls(c))
+                    yield return child;
+            }
+        }
+
+        // --- MÉTODOS AUXILIARES EXISTENTES ---
+
         private string GetDefaultSyncFolder()
         {
             if (!string.IsNullOrEmpty(config.SyncFolderPath))
@@ -1940,7 +2159,6 @@ namespace FireKeeper
 
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
             string defaultDir = Path.Combine(desktopPath, APP_NAME);
-            
             try
             {
                 Directory.CreateDirectory(defaultDir);
