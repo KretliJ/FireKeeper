@@ -1,0 +1,140 @@
+<ui:FluentWindow
+    x:Class="FireKeeper.SettingsWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    Title="FireKeeper - Backup Manager"
+    Width="640"
+    Height="700"
+    MinWidth="560"
+    MinHeight="600"
+    WindowStartupLocation="CenterScreen"
+    ExtendsContentIntoTitleBar="True"
+    WindowBackdropType="Acrylic"
+    ResizeMode="CanResizeWithGrip">
+
+    <!--
+        WindowBackdropType="Acrylic" above is what gives the window the real DWM Acrylic
+        material (the same mechanism TranslucentTB uses on the taskbar) - WPF-UI's FluentWindow
+        renders on a DirectComposition-backed surface, which is the piece plain WinForms was
+        missing to make this work reliably behind ordinary controls.
+    -->
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar
+            x:Name="AppTitleBar"
+            Grid.Row="0"
+            Title="FireKeeper - Backup Manager" />
+
+        <ScrollViewer
+            Grid.Row="1"
+            Margin="24,8,24,8"
+            VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
+                <TextBlock
+                    Text="🔥 FireKeeper"
+                    FontSize="26"
+                    FontWeight="Bold"
+                    Foreground="#FF7A1E" />
+                <TextBlock
+                    Text="Firefox Backup &amp; Sync"
+                    FontSize="14"
+                    Opacity="0.7"
+                    Margin="0,2,0,16" />
+
+                <TextBlock Text="📁 Firefox Profile" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <DockPanel Margin="0,0,0,16">
+                    <Button
+                        x:Name="BrowseProfileButton"
+                        Content="📂 Select..."
+                        DockPanel.Dock="Right"
+                        Margin="8,0,0,0"
+                        Click="BrowseProfileButton_Click" />
+                    <TextBox x:Name="ProfilePathBox" />
+                </DockPanel>
+
+                <TextBlock Text="☁️ Sync Folder" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <DockPanel Margin="0,0,0,16">
+                    <Button
+                        x:Name="BrowseFolderButton"
+                        Content="📂 Browse..."
+                        DockPanel.Dock="Right"
+                        Margin="8,0,0,0"
+                        Click="BrowseFolderButton_Click" />
+                    <TextBox x:Name="SyncFolderBox" />
+                </DockPanel>
+
+                <TextBlock Text="⚙️ Backup Settings" FontWeight="SemiBold" Margin="0,8,0,8" />
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                        <TextBlock Text="Interval (hours)" Opacity="0.7" Margin="0,0,0,4" />
+                        <TextBox x:Name="IntervalBox" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                        <TextBlock Text="Max backups to keep" Opacity="0.7" Margin="0,0,0,4" />
+                        <TextBox x:Name="MaxBackupsBox" />
+                    </StackPanel>
+                </Grid>
+
+                <CheckBox
+                    x:Name="StartupCheck"
+                    Content="Run FireKeeper when Windows starts"
+                    Margin="0,0,0,16" />
+
+                <TextBlock Text="📊 Progress" FontWeight="SemiBold" Margin="0,0,0,4" />
+                <ProgressBar
+                    x:Name="ProgressBarControl"
+                    Height="10"
+                    Minimum="0"
+                    Maximum="100"
+                    Margin="0,0,0,4" />
+                <TextBlock
+                    x:Name="ProgressLabel"
+                    Text="Ready"
+                    Opacity="0.7"
+                    Margin="0,0,0,16" />
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,8">
+                    <Button
+                        x:Name="RestoreButton"
+                        Content="📥 Restore Backup"
+                        Background="#FF5722"
+                        Foreground="White"
+                        Margin="0,0,8,0"
+                        Padding="12,6"
+                        Click="RestoreButton_Click" />
+                    <Button
+                        x:Name="BackupNowButton"
+                        Content="🔄 Backup Now"
+                        Background="#FF9800"
+                        Foreground="White"
+                        Margin="0,0,8,0"
+                        Padding="12,6"
+                        Click="BackupNowButton_Click" />
+                    <Button
+                        x:Name="SaveButton"
+                        Content="💾 Save Settings"
+                        Background="#4CAF50"
+                        Foreground="White"
+                        Padding="12,6"
+                        Click="SaveButton_Click" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="#22000000" Padding="16,10">
+            <TextBlock x:Name="StatusLabel" Text="✅ Ready" Opacity="0.8" />
+        </Border>
+    </Grid>
+</ui:FluentWindow>

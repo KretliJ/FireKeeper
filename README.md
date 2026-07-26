@@ -34,8 +34,8 @@
 | 1.0.0   | Initial commit with basic functionality                                                                                 | Deprecated                            |
 | 1.0.1   | Built-in Google Drive OAuth                                                                                             | [Legacy](docs/LEGACY.md) / Deprecated |
 | 2.0.0   | OAuth dropped for Universal sync folder, progress bar, debug console, clickable notifications, multi-profile selection | Superseded                            |
-| 2.1.0   | Quality of Life Update: Testing, refactor to .NET 10, improved project structure, fixed minor bugs                      | Superseded                            |
-| 2.2.0   | Implemented dark mode                                                                                                   | **Active**                      |
+| 2.1.0   | Quality of Life Update: Testing, refactor to .NET 10, improved project structure, fixed minor bugs                     | Superseded                            |
+| 2.2.0   | Revamped visual in favor of more modern visual. Refactored project structure. Functionality not affected               | **Active**                      |
 
 ---
 
@@ -45,6 +45,7 @@
 
 - ⬜ Verify and correct technical debt and possible security issues
 - ✅ Add extensive testing (28 unit tests + 8 integration tests)
+    - Last testing run - 2.1.0 
 - ✅ Double-click tray icon opens manager (Implemented 1.0.1)
 - ✅ Run on system start option (Implemented 2.1.0)
 - ✅ Auto-delete old backups (Implemented 2.0.0)
@@ -56,14 +57,13 @@
 - ⬜ Backup compression level option
 - ✅ Other cloud providers (superseded by architecture change in 2.0.0)
 - ⬜ Drag and drop backup file to restore
-- ⬜ Drag folder to set profile path
-- ⬜ Profile sharing between Windows devices
+- ❌ Drag folder to set profile path (superseded by 2.0.0 architectural changes)
 
 ### UX Improvements
 
-- ✅ Dark mode (initial implementation 2.2.0)
+- ⬜ Dark mode
 - ⬜ System language support
-- ⬜ UI renderer update
+- ✅ UI renderer update
 - ✅ Progress bar (Implemented 2.0.0)
 - ✅ Debug logging (Implemented 2.0.0)
 - ✅ Progress tracking (Implemented 2.0.0)
