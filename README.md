@@ -13,7 +13,7 @@
 
 ## ✨ Features
 
-- 🚀 **Lightweight** - ~5MB of RAM consumption, near-zero CPU when idle
+- 🚀 **Lightweight** - ~53MB of RAM consumption, near-zero CPU when idle
 - 🔄 **Automatic Backups** - Configurable schedule (default: every 24 hours)
 - ⏰ **Pending Backup on Startup** - Missed backups run automatically when the app starts
 - 📁 **Smart Backup Selection** - Backs up only important files (bookmarks, passwords, history, extensions, settings)
@@ -128,11 +128,11 @@ dotnet run
 
 | Metric                | Value                                                       |
 | --------------------- | ----------------------------------------------------------- |
-| Background RAM        | ~31 MB                                                      |
-| Backup RAM            | ~36 MB                                                      |
-| Restore RAM           | ~38 MB                                                      |
+| Background RAM        | ~53 MB                                                      |
+| Backup RAM            | ~71 MB                                                      |
+| Restore RAM           | ~76 MB                                                      |
 | Disk Read/Write Speed | May vary with hardware                                      |
-| CPU Usage (idle)      | Near 0%. May vary with hardware                             |
+| CPU Usage (idle)      | Near 0.1%. May vary with hardware                           |
 | CPU Usage (backup)    | Temporary spikes during compression. May vary with hardware |
 
 FireKeeper is designed to be lightweight and run silently in the background without significantly impacting your system performance.
