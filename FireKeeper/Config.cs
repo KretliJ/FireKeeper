@@ -19,6 +19,5 @@ namespace FireKeeper
         public List<string> IncludeFolders { get; set; }
         public List<string> ExcludeFolders { get; set; }
         public List<string> ExcludeExtensions { get; set; }
-        public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     }
 }

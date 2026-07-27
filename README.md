@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/yourusername/FireKeeper)
 [![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Platform](https://img.shields.io/badge/platform-Windows-orange.svg)]()
-[![Tests](<https://img.shields.io/badge/tests-28%20passing-brightgreen.svg>)]()
+[![Tests](<https://img.shields.io/badge/tests-33%20passing-brightgreen.svg>)]()
 
 ![FireKeeper Logo](FireKeeper/firekeeper.png)
 
