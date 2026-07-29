@@ -5,6 +5,7 @@
 # User-specific configuration
 /appsettings.Development.json
 /appsettings.Production.json
+*.iss
 
 # Build output
 **/bin/
@@ -13,7 +14,7 @@
 /publish/
 *.exe
 *.dll
-
+**/publish/
 # Visual Studio
 .vs/
 *.user
